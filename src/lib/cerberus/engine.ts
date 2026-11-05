@@ -174,7 +174,7 @@ export class CerberusEngine {
     const tick = 0.01;
     this.bot.res = res;
     this.bot.bid = Math.min(Math.floor((res - half) / tick) * tick, this.spot.bids[0][0]);
-    this.bot.ask = Math.max(Math.ceil((res + half) / tick) * tick, this.spot.asks[0][0]);
+    this.bot.ask = Math.max(Math.ceil((res + half) / tick) * tick, this.spot.asks[0]?.[0] ?? s);
   }
 
   private paperFill(t: Trade) {

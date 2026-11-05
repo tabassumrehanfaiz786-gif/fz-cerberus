@@ -17,7 +17,7 @@ export const Route = createFileRoute("/")({
   component: Terminal,
 });
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "up" | "down" | "warn" }) {
+function Stat({ label, value, tone }: { label: string; value: string; tone?: "up" | "down" | "warn" | undefined }) {
   const c = tone === "up" ? "text-bid" : tone === "down" ? "text-mm" : tone === "warn" ? "text-warn" : "text-foreground";
   return (
     <div className="border-r border-border px-3 py-1.5">
