@@ -7,7 +7,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Project Cerberus — MM & Delta-Neutral Hedging Terminal" },
-      { name: "description", content: "Live Binance spot/perp liquidity heatmap, market-maker surveillance, Avellaneda-Stoikov paper bot and MAR Art.12 audit ledger." },
+      { name: "description", content: "Live Coinbase spot/perp liquidity heatmap, market-maker surveillance, Avellaneda-Stoikov paper bot and MAR Art.12 audit ledger." },
       { property: "og:title", content: "Project Cerberus Terminal" },
       { property: "og:description", content: "Institutional market maker surveillance and delta-neutral hedging terminal." },
       { property: "og:type", content: "website" },
@@ -77,7 +77,7 @@ function Terminal() {
         <h1 className="text-sm font-bold tracking-[0.3em]">
           CERBERUS<span className="text-mm">▲</span>
         </h1>
-        <span className="text-[10px] text-muted-foreground">INSTITUTIONAL MM / DELTA-NEUTRAL HEDGING · BTCUSDT</span>
+        <span className="text-[10px] text-muted-foreground">INSTITUTIONAL MM / DELTA-NEUTRAL HEDGING · COINBASE BTC-USD / BTC PERP</span>
         <div className="ml-auto flex gap-3 text-[10px]">
           {(["spot", "perp"] as const).map((v) => (
             <span key={v} className={e.status[v] === "live" ? "text-bid" : "text-warn"}>
@@ -99,9 +99,14 @@ function Terminal() {
         <Stat label="Sharpe (ann.)" value={e.sharpe().toFixed(1)} />
       </div>
       <div className="grid min-h-0 flex-1 grid-cols-12 grid-rows-6 gap-px bg-border">
-        <Panel title="Liquidity heatmap · spot depth (emerald) · cross-venue MM walls (crimson) · echo arcs → perp" className="col-span-9 row-span-4">
-          <div className="h-full"><Heatmap engine={e} /></div>
-        </Panel>
+        <section className="col-span-9 row-span-4 grid min-h-0 grid-rows-2 gap-px">
+          <Panel title="Passive liquidity heatmap · Coinbase BTC-USD depth (emerald) · echo arcs → perp">
+            <div className="h-full"><Heatmap engine={e} /></div>
+          </Panel>
+          <Panel title="Market maker heatmap · large resting walls & spot/perp mirrored quotes (crimson)">
+            <div className="h-full"><Heatmap engine={e} mode="mm" /></div>
+          </Panel>
+        </section>
         <Panel title="A-S quoting bot" className="col-span-3 row-span-2">
           <div className="grid grid-cols-2 gap-1 text-xs">
             <span className="text-muted-foreground">Bid</span><span className="text-bid">{e.bot.bid.toFixed(2)}</span>
@@ -153,7 +158,7 @@ function Terminal() {
         </Panel>
       </div>
       <footer className="border-t border-border px-4 py-1 text-[9px] text-muted-foreground">
-        Surveillance flags are statistical heuristics on public data; they do not identify specific firms. Bot is paper-only. Spot depth snapshots arrive every 100ms, so sub-5ms retreat timing uses exchange event timestamps.
+        Surveillance flags are statistical heuristics on public data; they do not identify specific firms. Bot is paper-only. Data: Coinbase Advanced Trade public feed (BTC-USD spot, BIP-20DEC30-CDE perpetual). Book sampled every 100ms; retreat timing uses exchange event timestamps.
       </footer>
     </main>
   );

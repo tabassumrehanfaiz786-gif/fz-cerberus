@@ -44,30 +44,68 @@ export class CerberusEngine {
   private prevSpot: Book | null = null;
   private pendingRetreats: { side: "bid" | "ask"; pMin: number; pMax: number; qty: number; ts: number }[] = [];
 
-  start() {
-    this.open("wss://stream.binance.com:9443/stream?streams=btcusdt@depth20@100ms/btcusdt@aggTrade", "spot");
-    this.open("wss://fstream.binance.com/stream?streams=btcusdt@depth20@100ms/btcusdt@aggTrade", "perp");
-  }
-  stop() { this.sockets.forEach((s) => { s.onclose = null; s.close(); }); this.sockets = []; }
+  static SPOT = "BTC-USD";
+  static PERP = "BIP-20DEC30-CDE"; // Coinbase US BTC perpetual (0.01 BTC / contract)
+  static PERP_MULT = 0.01;
+  private books = { spot: { bid: new Map<number, number>(), ask: new Map<number, number>(), ts: 0 }, perp: { bid: new Map<number, number>(), ask: new Map<number, number>(), ts: 0 } };
+  private timer: ReturnType<typeof setInterval> | undefined;
 
-  private open(url: string, venue: "spot" | "perp") {
-    const ws = new WebSocket(url);
-    ws.onopen = () => (this.status[venue] = "live");
-    ws.onerror = () => (this.status[venue] = "error");
-    ws.onclose = () => { this.status[venue] = "reconnecting"; setTimeout(() => this.open(url, venue), 2000); };
+  start() {
+    this.open();
+    this.timer = setInterval(() => {
+      const snap = (v: "spot" | "perp"): Book => {
+        const b = this.books[v];
+        return {
+          bids: [...b.bid].sort((x, y) => y[0] - x[0]).slice(0, 40),
+          asks: [...b.ask].sort((x, y) => x[0] - y[0]).slice(0, 40),
+          ts: b.ts || Date.now(),
+        };
+      };
+      if (this.books.perp.bid.size) this.perp = snap("perp");
+      if (this.books.spot.bid.size) this.onSpotBook(snap("spot"));
+    }, 100);
+  }
+  stop() { clearInterval(this.timer); this.sockets.forEach((s) => { s.onclose = null; s.close(); }); this.sockets = []; }
+
+  private open() {
+    const ws = new WebSocket("wss://advanced-trade-ws.coinbase.com");
+    const ids = [CerberusEngine.SPOT, CerberusEngine.PERP];
+    ws.onopen = () => {
+      for (const channel of ["level2", "market_trades", "heartbeats"]) ws.send(JSON.stringify({ type: "subscribe", product_ids: ids, channel }));
+      this.status.spot = this.status.perp = "live";
+    };
+    ws.onerror = () => (this.status.spot = this.status.perp = "error");
+    ws.onclose = () => { this.status.spot = this.status.perp = "reconnecting"; setTimeout(() => this.open(), 2000); };
     ws.onmessage = (ev) => {
       this.status.msgs++;
-      const { stream, data } = JSON.parse(ev.data);
+      const m = JSON.parse(ev.data);
       const now = Date.now();
-      if (stream.includes("aggTrade")) {
-        const t: Trade = { p: +data.p, q: +data.q, t: data.T, recv: now, takerSell: data.m };
-        this.status[venue === "spot" ? "spotLat" : "perpLat"] = Math.max(0, now - data.E);
-        venue === "spot" ? this.onSpotTrade(t) : this.onPerpTrade(t);
-      } else {
-        const bids = (data.bids ?? data.b).map((l: string[]) => [+l[0]!, +l[1]!] as Level);
-        const asks = (data.asks ?? data.a).map((l: string[]) => [+l[0]!, +l[1]!] as Level);
-        const book = { bids, asks, ts: data.E ?? now };
-        if (venue === "spot") this.onSpotBook(book); else this.perp = book;
+      if (m.channel === "l2_data") {
+        for (const e of m.events ?? []) {
+          const v = e.product_id === CerberusEngine.SPOT ? "spot" : e.product_id === CerberusEngine.PERP ? "perp" : null;
+          if (!v) continue;
+          const b = this.books[v];
+          if (e.type === "snapshot") { b.bid.clear(); b.ask.clear(); }
+          const mult = v === "perp" ? CerberusEngine.PERP_MULT : 1;
+          for (const u of e.updates ?? []) {
+            const side = u.side === "bid" ? b.bid : b.ask;
+            const p = +u.price_level, q = +u.new_quantity * mult;
+            if (q === 0) side.delete(p); else side.set(p, q);
+            const t = Date.parse(u.event_time);
+            if (t) { b.ts = t; this.status[v === "spot" ? "spotLat" : "perpLat"] = Math.max(0, now - t); }
+          }
+        }
+      } else if (m.channel === "market_trades") {
+        for (const e of m.events ?? []) {
+          if (e.type !== "update") continue;
+          for (const tr of [...(e.trades ?? [])].reverse()) {
+            const v = tr.product_id === CerberusEngine.SPOT ? "spot" : tr.product_id === CerberusEngine.PERP ? "perp" : null;
+            if (!v) continue;
+            const mult = v === "perp" ? CerberusEngine.PERP_MULT : 1;
+            const t: Trade = { p: +tr.price, q: +tr.size * mult, t: Date.parse(tr.time), recv: now, takerSell: tr.side === "SELL" };
+            v === "spot" ? this.onSpotTrade(t) : this.onPerpTrade(t);
+          }
+        }
       }
     };
     this.sockets.push(ws);
@@ -93,7 +131,7 @@ export class CerberusEngine {
     // volatility (EWMA of squared returns, $/sqrt(s))
     if (this.lastMid && m) {
       const dt = Math.max(0.05, (now - this.lastMidT) / 1000);
-      const r2 = (m - this.lastMid) ** 2 / dt;
+      const r2 = Math.min((m - this.lastMid) ** 2 / dt, 400);
       this.varEwma = this.varEwma ? 0.97 * this.varEwma + 0.03 * r2 : r2;
       this.sigma = Math.sqrt(this.varEwma);
     }
@@ -123,7 +161,10 @@ export class CerberusEngine {
     // heatmap column + MM overlay (levels that are both large and near-touch on both venues)
     const perpMap = new Map(this.perp.bids.concat(this.perp.asks).map(([p, q]) => [Math.round(p), q]));
     const levels = book.bids.concat(book.asks);
-    const mmLevels = levels.filter(([p, q]) => q > 2 && (perpMap.get(Math.round(p)) ?? 0) > 2);
+    const sizes = levels.map((l) => l[1]).sort((x, y) => x - y);
+    const med = sizes[Math.floor(sizes.length / 2)] ?? 0;
+    const wall = Math.max(1, med * 8);
+    const mmLevels = levels.filter(([p, q]) => q >= wall || (q > 0.5 && (perpMap.get(Math.round(p)) ?? 0) > 0.5));
     this.columns.push({ ts: now, mid: m, levels, mmLevels });
     if (this.columns.length > this.maxCols) this.columns.shift();
     this.requote();

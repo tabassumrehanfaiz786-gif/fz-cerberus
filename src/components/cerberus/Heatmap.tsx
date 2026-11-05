@@ -9,7 +9,7 @@ const ramp = (x: number) => {
   return `rgb(${a.map((v, i) => Math.round(v + (b[i]! - v) * t)).join(",")})`;
 };
 
-export function Heatmap({ engine }: { engine: CerberusEngine }) {
+export function Heatmap({ engine, mode = "depth" }: { engine: CerberusEngine; mode?: "depth" | "mm" }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = ref.current!;
@@ -26,10 +26,10 @@ export function Heatmap({ engine }: { engine: CerberusEngine }) {
       const mid = engine.mid(engine.spot);
       if (!cols.length || !mid) {
         ctx.fillStyle = "#64748b"; ctx.font = "12px monospace";
-        ctx.fillText("Awaiting Binance depth stream…", 20, 30);
+        ctx.fillText("Awaiting Coinbase depth stream…", 20, 30);
         raf = requestAnimationFrame(draw); return;
       }
-      const range = Math.max(15, engine.sigma * 20);
+      const range = Math.min(80, Math.max(15, engine.sigma * 6));
       const pTop = mid + range, pBot = mid - range;
       const y = (p: number) => ((pTop - p) / (pTop - pBot)) * H;
       const plotW = W - 70;
@@ -40,14 +40,14 @@ export function Heatmap({ engine }: { engine: CerberusEngine }) {
       for (const [, q] of cols[cols.length - 1]!.levels) maxQ = Math.max(maxQ, q);
       cols.forEach((col, i) => {
         const x = x0 + i * cw;
-        for (const [p, q] of col.levels) {
+        if (mode === "depth") for (const [p, q] of col.levels) {
           if (p > pTop || p < pBot) continue;
           ctx.fillStyle = ramp(Math.sqrt(q / maxQ));
           ctx.fillRect(x, y(p) - rowH / 2, cw + 0.5, rowH);
         }
         for (const [p, q] of col.mmLevels) {
           if (p > pTop || p < pBot) continue;
-          ctx.fillStyle = `rgba(239,68,68,${Math.min(0.9, 0.3 + q / maxQ)})`;
+          ctx.fillStyle = mode === "mm" ? `rgba(239,68,68,${Math.min(1, 0.25 + Math.sqrt(q / maxQ))})` : `rgba(239,68,68,${Math.min(0.9, 0.3 + q / maxQ)})`;
           ctx.fillRect(x, y(p) - rowH / 2, cw + 0.5, rowH);
         }
       });
@@ -105,6 +105,6 @@ export function Heatmap({ engine }: { engine: CerberusEngine }) {
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [engine]);
+  }, [engine, mode]);
   return <canvas ref={ref} className="h-full w-full" />;
 }
