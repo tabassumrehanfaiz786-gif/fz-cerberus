@@ -6,7 +6,7 @@ const ramp = (x: number) => {
   // #052e16 -> #10b981
   const a = [5, 46, 22], b = [16, 185, 129];
   const t = Math.min(1, Math.max(0, x));
-  return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`;
+  return `rgb(${a.map((v, i) => Math.round(v + (b[i]! - v) * t)).join(",")})`;
 };
 
 export function Heatmap({ engine }: { engine: CerberusEngine }) {
@@ -37,7 +37,7 @@ export function Heatmap({ engine }: { engine: CerberusEngine }) {
       const x0 = plotW - cols.length * cw;
       const rowH = Math.max(1.5, (0.01 / (pTop - pBot)) * H * 50);
       let maxQ = 1;
-      for (const [, q] of cols[cols.length - 1].levels) maxQ = Math.max(maxQ, q);
+      for (const [, q] of cols[cols.length - 1]!.levels) maxQ = Math.max(maxQ, q);
       cols.forEach((col, i) => {
         const x = x0 + i * cw;
         for (const [p, q] of col.levels) {

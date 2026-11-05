@@ -64,8 +64,8 @@ export class CerberusEngine {
         this.status[venue === "spot" ? "spotLat" : "perpLat"] = Math.max(0, now - data.E);
         venue === "spot" ? this.onSpotTrade(t) : this.onPerpTrade(t);
       } else {
-        const bids = (data.bids ?? data.b).map((l: string[]) => [+l[0], +l[1]] as Level);
-        const asks = (data.asks ?? data.a).map((l: string[]) => [+l[0], +l[1]] as Level);
+        const bids = (data.bids ?? data.b).map((l: string[]) => [+l[0]!, +l[1]!] as Level);
+        const asks = (data.asks ?? data.a).map((l: string[]) => [+l[0]!, +l[1]!] as Level);
         const book = { bids, asks, ts: data.E ?? now };
         if (venue === "spot") this.onSpotBook(book); else this.perp = book;
       }
@@ -73,10 +73,10 @@ export class CerberusEngine {
     this.sockets.push(ws);
   }
 
-  mid(b: Book) { return b.bids.length && b.asks.length ? (b.bids[0][0] + b.asks[0][0]) / 2 : 0; }
+  mid(b: Book) { return b.bids.length && b.asks.length ? (b.bids[0]![0] + b.asks[0]![0]) / 2 : 0; }
   micro(b: Book) {
     if (!b.bids.length || !b.asks.length) return 0;
-    const [bp, bq] = b.bids[0], [ap, aq] = b.asks[0];
+    const [bp, bq] = b.bids[0]!, [ap, aq] = b.asks[0]!;
     return (bp * aq + ap * bq) / (bq + aq);
   }
 
