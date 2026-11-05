@@ -173,7 +173,7 @@ export class CerberusEngine {
     const half = (g * sig2 * this.tau + (2 / g) * Math.log(1 + g / this.kappa)) / 2;
     const tick = 0.01;
     this.bot.res = res;
-    this.bot.bid = Math.min(Math.floor((res - half) / tick) * tick, this.spot.bids[0][0]);
+    this.bot.bid = Math.min(Math.floor((res - half) / tick) * tick, this.spot.bids[0]?.[0] ?? s);
     this.bot.ask = Math.max(Math.ceil((res + half) / tick) * tick, this.spot.asks[0]?.[0] ?? s);
   }
 
@@ -211,7 +211,7 @@ export class CerberusEngine {
   sharpe() {
     const e = this.equity;
     if (e.length < 10) return 0;
-    const r = e.slice(1).map((x, i) => x.v - e[i].v);
+    const r = e.slice(1).map((x, i) => x.v - e[i]!.v);
     const mu = r.reduce((a, b) => a + b, 0) / r.length;
     const sd = Math.sqrt(r.reduce((a, b) => a + (b - mu) ** 2, 0) / r.length) || 1e-9;
     return (mu / sd) * Math.sqrt(86400 * 365);
