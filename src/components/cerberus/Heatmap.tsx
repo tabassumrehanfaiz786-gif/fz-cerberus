@@ -29,7 +29,7 @@ export function Heatmap({ engine, mode = "depth" }: { engine: CerberusEngine; mo
         ctx.fillText("Awaiting Coinbase depth stream…", 20, 30);
         raf = requestAnimationFrame(draw); return;
       }
-      const range = Math.max(15, engine.sigma * 20);
+      const range = Math.min(80, Math.max(15, engine.sigma * 6));
       const pTop = mid + range, pBot = mid - range;
       const y = (p: number) => ((pTop - p) / (pTop - pBot)) * H;
       const plotW = W - 70;

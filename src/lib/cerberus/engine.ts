@@ -131,7 +131,7 @@ export class CerberusEngine {
     // volatility (EWMA of squared returns, $/sqrt(s))
     if (this.lastMid && m) {
       const dt = Math.max(0.05, (now - this.lastMidT) / 1000);
-      const r2 = (m - this.lastMid) ** 2 / dt;
+      const r2 = Math.min((m - this.lastMid) ** 2 / dt, 400);
       this.varEwma = this.varEwma ? 0.97 * this.varEwma + 0.03 * r2 : r2;
       this.sigma = Math.sqrt(this.varEwma);
     }
@@ -163,8 +163,8 @@ export class CerberusEngine {
     const levels = book.bids.concat(book.asks);
     const sizes = levels.map((l) => l[1]).sort((x, y) => x - y);
     const med = sizes[Math.floor(sizes.length / 2)] ?? 0;
-    const wall = Math.max(0.5, med * 4);
-    const mmLevels = levels.filter(([p, q]) => q >= wall || (q > 0.25 && (perpMap.get(Math.round(p)) ?? 0) > 0.25));
+    const wall = Math.max(1, med * 8);
+    const mmLevels = levels.filter(([p, q]) => q >= wall || (q > 0.5 && (perpMap.get(Math.round(p)) ?? 0) > 0.5));
     this.columns.push({ ts: now, mid: m, levels, mmLevels });
     if (this.columns.length > this.maxCols) this.columns.shift();
     this.requote();
