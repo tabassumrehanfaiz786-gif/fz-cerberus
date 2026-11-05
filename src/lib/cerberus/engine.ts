@@ -151,7 +151,7 @@ export class CerberusEngine {
     // Echo matcher: spot maker fill followed 10-50ms later by same-direction perp taker hedge.
     // spot takerSell => maker bought (long) => hedge = perp taker sell
     for (let i = this.spotTrades.length - 1; i >= 0; i--) {
-      const s = this.spotTrades[i];
+      const s = this.spotTrades[i]!;
       const lat = t.t - s.t;
       if (lat > 50) break;
       if (lat < 10 || s.takerSell !== t.takerSell) continue;
