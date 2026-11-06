@@ -6,6 +6,8 @@ export type Echo = { id: number; spot: Trade; perp: Trade; latency: number; side
 export type Retreat = { id: number; side: "bid" | "ask"; pMin: number; pMax: number; qty: number; dt: number; toxic: boolean; born: number };
 export type LedgerRow = { id: number; ts: number; type: string; article: string; detail: string; hash: string };
 export type Column = { ts: number; mid: number; levels: Level[]; mmLevels: Level[] };
+export type Bubble = { id: number; p: number; q: number; t: number; takerSell: boolean; venue: "spot" | "perp"; hit?: "ABSORBED" | "SWEPT" };
+export type Wall = { p: number; q: number; side: "bid" | "ask"; dist: number };
 
 export const MAR = {
   echo: "MAR Art.12(1)(a)(i) — coordinated cross-venue orders",
@@ -24,7 +26,13 @@ export class CerberusEngine {
   spot: Book = { bids: [], asks: [], ts: 0 };
   perp: Book = { bids: [], asks: [], ts: 0 };
   columns: Column[] = [];
-  maxCols = 600;
+  maxCols = 600; // 1 column / 500ms => 5 min history
+  bucket = 2; // $ price bucket for heatmap aggregation
+  bubbles: Bubble[] = [];
+  walls: Wall[] = [];
+  private deep: Level[] = [];
+  private deepSide = new Map<number, "bid" | "ask">();
+  private tick = 0;
   spotTrades: Trade[] = [];
   perpTrades: Trade[] = [];
   echoes: Echo[] = [];
@@ -62,7 +70,16 @@ export class CerberusEngine {
         };
       };
       if (this.books.perp.bid.size) this.perp = snap("perp");
-      if (this.books.spot.bid.size) this.onSpotBook(snap("spot"));
+      if (this.books.spot.bid.size) {
+        // deep bucketed book (±$300) for MM wall detection
+        const sb = this.books.spot, B = this.bucket, agg = new Map<number, number>();
+        const top = [...sb.bid.keys()].reduce((a, b) => Math.max(a, b), 0);
+        for (const [p, q] of sb.bid) if (top - p < 300) { const k = Math.floor(p / B) * B; agg.set(k, (agg.get(k) ?? 0) + q); }
+        for (const [p, q] of sb.ask) if (p - top < 300) { const k = Math.floor(p / B) * B + B; agg.set(-k, (agg.get(-k) ?? 0) + q); }
+        this.deep = [...agg].map(([k, q]) => [Math.abs(k), q, k < 0 ? 1 : 0] as unknown as Level);
+        this.deepSide = new Map([...agg].map(([k]) => [Math.abs(k), k < 0 ? "ask" : "bid"] as [number, "bid" | "ask"]));
+        this.onSpotBook(snap("spot"));
+      }
     }, 100);
   }
   stop() { clearInterval(this.timer); this.sockets.forEach((s) => { s.onclose = null; s.close(); }); this.sockets = []; }
@@ -158,21 +175,40 @@ export class CerberusEngine {
     this.pendingRetreats = this.pendingRetreats.filter((r) => now - r.ts < 1000);
     this.prevSpot = book;
     this.spot = book;
-    // heatmap column + MM overlay (levels that are both large and near-touch on both venues)
-    const perpMap = new Map(this.perp.bids.concat(this.perp.asks).map(([p, q]) => [Math.round(p), q]));
-    const levels = book.bids.concat(book.asks);
+    // heatmap column (bucketed deep book) + MM wall overlay
+    const levels = this.deep.map(([p, q]) => [p, q] as Level);
     const sizes = levels.map((l) => l[1]).sort((x, y) => x - y);
+    const p92 = sizes[Math.floor(sizes.length * 0.92)] ?? 0;
     const med = sizes[Math.floor(sizes.length / 2)] ?? 0;
-    const p95 = sizes[Math.floor(sizes.length * 0.95)] ?? 0;
-    const wall = Math.max(0.25, Math.min(med * 4, p95));
-    const mmLevels = levels.filter(([p, q]) => q >= wall || (q > 0.1 && (perpMap.get(Math.round(p)) ?? 0) > 0.1));
-    this.columns.push({ ts: now, mid: m, levels, mmLevels });
-    if (this.columns.length > this.maxCols) this.columns.shift();
+    const wall = Math.max(1, med * 5, p92);
+    const mmLevels = levels.filter(([, q]) => q >= wall);
+    this.walls = mmLevels
+      .map(([p, q]) => ({ p, q, side: this.deepSide.get(p) ?? "bid", dist: p - m }))
+      .sort((a, b) => b.q - a.q);
+    if (++this.tick % 5 === 0) {
+      this.columns.push({ ts: now, mid: m, levels, mmLevels });
+      if (this.columns.length > this.maxCols) this.columns.shift();
+    }
     this.requote();
     this.markEquity();
   }
 
+  private addBubble(t: Trade, venue: "spot" | "perp") {
+    if (t.q < 0.05) return;
+    const b: Bubble = { id: ++this.seq, p: t.p, q: t.q, t: t.recv, takerSell: t.takerSell, venue };
+    if (venue === "spot" && t.q >= 0.25) {
+      const w = this.walls.find((w) => Math.abs(w.p - t.p) <= this.bucket * 1.5);
+      if (w) {
+        b.hit = t.q >= w.q ? "SWEPT" : "ABSORBED";
+        this.log(`WALL_${b.hit}`, MAR.skew, `${t.takerSell ? "SELL" : "BUY"} ${t.q.toFixed(3)} BTC hit ${w.q.toFixed(2)} BTC ${w.side} wall @ ${w.p}`);
+      }
+    }
+    this.bubbles.push(b);
+    if (this.bubbles.length > 400) this.bubbles.shift();
+  }
+
   private onSpotTrade(t: Trade) {
+    this.addBubble(t, "spot");
     this.spotTrades.push(t);
     if (this.spotTrades.length > 400) this.spotTrades.shift();
     // toxic retreat: pull occurred shortly before this trade
@@ -188,6 +224,7 @@ export class CerberusEngine {
   }
 
   private onPerpTrade(t: Trade) {
+    this.addBubble(t, "perp");
     this.perpTrades.push(t);
     if (this.perpTrades.length > 400) this.perpTrades.shift();
     // Echo matcher: spot maker fill followed 10-50ms later by same-direction perp taker hedge.
