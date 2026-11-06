@@ -107,6 +107,20 @@ function Terminal() {
             <div className="h-[300px] lg:h-full"><Heatmap engine={e} mode="mm" /></div>
           </Panel>
         </section>
+        <Panel title="Top institutional walls · $2 buckets · ±$300" className="lg:col-span-3 lg:row-span-2">
+          <table className="w-full text-[10px]">
+            <tbody>
+              {(["ask", "bid"] as const).flatMap((s) => e.walls.filter((w) => w.side === s).slice(0, 5)).map((w) => (
+                <tr key={w.side + w.p} className="border-b border-border/50">
+                  <td className={w.side === "bid" ? "text-bid" : "text-mm"}>{w.side.toUpperCase()}</td>
+                  <td>{w.p.toFixed(0)}</td>
+                  <td>{w.q.toFixed(2)}₿</td>
+                  <td className="text-muted-foreground">{w.dist >= 0 ? "+" : ""}{w.dist.toFixed(0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Panel>
         <Panel title="A-S quoting bot" className="lg:col-span-3 lg:row-span-2">
           <div className="grid grid-cols-2 gap-1 text-xs">
             <span className="text-muted-foreground">Bid</span><span className="text-bid">{e.bot.bid.toFixed(2)}</span>
