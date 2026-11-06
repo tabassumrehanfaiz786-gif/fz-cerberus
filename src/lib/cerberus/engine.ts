@@ -7,7 +7,7 @@ export type Retreat = { id: number; side: "bid" | "ask"; pMin: number; pMax: num
 export type LedgerRow = { id: number; ts: number; type: string; article: string; detail: string; hash: string };
 export type Column = { ts: number; mid: number; levels: Level[]; mmLevels: Level[] };
 export type Bubble = { id: number; p: number; q: number; t: number; takerSell: boolean; venue: "spot" | "perp"; hit?: "ABSORBED" | "SWEPT" };
-export type Wall = { p: number; q: number; side: "bid" | "ask"; dist: number };
+export type Wall = { p: number; q: number; side: "bid" | "ask"; dist: number; usd: number; age: number; absorbed: number; tags: string[] };
 
 export const MAR = {
   echo: "MAR Art.12(1)(a)(i) — coordinated cross-venue orders",
@@ -30,6 +30,11 @@ export class CerberusEngine {
   bucket = 2; // $ price bucket for heatmap aggregation
   bubbles: Bubble[] = [];
   walls: Wall[] = [];
+  private wallBorn = new Map<string, number>();
+  private absorbedAt = new Map<string, number>();
+  private icebergLogged = new Map<string, number>();
+  private prevWalls: Wall[] = [];
+  private prevWallMid = 0;
   private deep: Level[] = [];
   private deepSide = new Map<number, "bid" | "ask">();
   private tick = 0;
@@ -182,9 +187,9 @@ export class CerberusEngine {
     const med = sizes[Math.floor(sizes.length / 2)] ?? 0;
     const wall = Math.max(1, med * 5, p92);
     const mmLevels = levels.filter(([, q]) => q >= wall);
-    this.walls = mmLevels
-      .map(([p, q]) => ({ p, q, side: this.deepSide.get(p) ?? "bid", dist: p - m }))
-      .sort((a, b) => b.q - a.q);
+    this.walls = this.fingerprint(mmLevels
+      .map(([p, q]) => ({ p, q, side: this.deepSide.get(p) ?? "bid", dist: p - m, usd: p * q, age: 0, absorbed: 0, tags: [] as string[] }) as Wall)
+      .sort((a, b) => b.q - a.q), m, now);
     if (++this.tick % 5 === 0) {
       this.columns.push({ ts: now, mid: m, levels, mmLevels });
       if (this.columns.length > this.maxCols) this.columns.shift();
@@ -193,7 +198,42 @@ export class CerberusEngine {
     this.markEquity();
   }
 
+  // MM Signature Fingerprint Engine: persistence, two-sided symmetry, mid-peg, iceberg absorption
+  private fingerprint(walls: Wall[], m: number, now: number): Wall[] {
+    const seen = new Set<string>();
+    const dMid = m - this.prevWallMid;
+    for (const w of walls) {
+      const k = w.side + w.p; seen.add(k);
+      if (!this.wallBorn.has(k)) this.wallBorn.set(k, now);
+      w.age = (now - this.wallBorn.get(k)!) / 1000;
+      w.absorbed = this.absorbedAt.get(k) ?? 0;
+      if (w.age >= 30) w.tags.push("PERSISTENT");
+      if (w.absorbed > w.q && w.absorbed >= 0.5) {
+        w.tags.push(`ICEBERG ${w.absorbed.toFixed(2)} BTC ABSORBED`);
+        if (now - (this.icebergLogged.get(k) ?? 0) > 30000) {
+          this.icebergLogged.set(k, now);
+          this.log("ICEBERG_RELOAD", MAR.skew, `${w.side} @ ${w.p}: ${w.absorbed.toFixed(2)} BTC traded vs ${w.q.toFixed(2)} BTC visible`);
+        }
+      }
+      if (this.prevWallMid && Math.abs(dMid) >= this.bucket) {
+        const peg = this.prevWalls.find((pw) => pw.side === w.side && pw.p !== w.p && Math.abs(pw.q - w.q) / w.q < 0.15 && Math.abs(w.p - pw.p - dMid) <= this.bucket);
+        if (peg) w.tags.push("MID-PEG (quote follows price)");
+      }
+    }
+    for (const b of walls.filter((w) => w.side === "bid")) {
+      const a = walls.find((w) => w.side === "ask" && Math.abs(w.dist + b.dist) <= this.bucket * 2 && Math.abs(w.q - b.q) / Math.max(w.q, b.q) < 0.25);
+      if (a) { const tag = `TWO-SIDED ±$${Math.abs(b.dist).toFixed(0)}`; b.tags.push(tag); a.tags.push(tag); }
+    }
+    for (const k of [...this.wallBorn.keys()]) if (!seen.has(k)) { this.wallBorn.delete(k); this.absorbedAt.delete(k); }
+    this.prevWalls = walls; this.prevWallMid = m;
+    return walls;
+  }
+
   private addBubble(t: Trade, venue: "spot" | "perp") {
+    if (venue === "spot") {
+      const near = this.walls.find((w) => Math.abs(w.p - t.p) <= this.bucket);
+      if (near) { const k = near.side + near.p; this.absorbedAt.set(k, (this.absorbedAt.get(k) ?? 0) + t.q); }
+    }
     if (t.q < 0.05) return;
     const b: Bubble = { id: ++this.seq, p: t.p, q: t.q, t: t.recv, takerSell: t.takerSell, venue };
     if (venue === "spot" && t.q >= 0.25) {
