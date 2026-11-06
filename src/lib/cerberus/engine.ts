@@ -76,7 +76,7 @@ export class CerberusEngine {
         const top = [...sb.bid.keys()].reduce((a, b) => Math.max(a, b), 0);
         for (const [p, q] of sb.bid) if (top - p < 300) { const k = Math.floor(p / B) * B; agg.set(k, (agg.get(k) ?? 0) + q); }
         for (const [p, q] of sb.ask) if (p - top < 300) { const k = Math.floor(p / B) * B + B; agg.set(-k, (agg.get(-k) ?? 0) + q); }
-        this.deep = [...agg].map(([k, q]) => [Math.abs(k), q, k < 0 ? 1 : 0] as unknown as Level);
+        this.deep = [...agg].map(([k, q]) => [Math.abs(k), q] as Level);
         this.deepSide = new Map([...agg].map(([k]) => [Math.abs(k), k < 0 ? "ask" : "bid"] as [number, "bid" | "ask"]));
         this.onSpotBook(snap("spot"));
       }
