@@ -163,8 +163,9 @@ export class CerberusEngine {
     const levels = book.bids.concat(book.asks);
     const sizes = levels.map((l) => l[1]).sort((x, y) => x - y);
     const med = sizes[Math.floor(sizes.length / 2)] ?? 0;
-    const wall = Math.max(1, med * 8);
-    const mmLevels = levels.filter(([p, q]) => q >= wall || (q > 0.5 && (perpMap.get(Math.round(p)) ?? 0) > 0.5));
+    const p95 = sizes[Math.floor(sizes.length * 0.95)] ?? 0;
+    const wall = Math.max(0.25, Math.min(med * 4, p95));
+    const mmLevels = levels.filter(([p, q]) => q >= wall || (q > 0.1 && (perpMap.get(Math.round(p)) ?? 0) > 0.1));
     this.columns.push({ ts: now, mid: m, levels, mmLevels });
     if (this.columns.length > this.maxCols) this.columns.shift();
     this.requote();

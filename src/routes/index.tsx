@@ -20,7 +20,7 @@ export const Route = createFileRoute("/")({
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "up" | "down" | "warn" | undefined }) {
   const c = tone === "up" ? "text-bid" : tone === "down" ? "text-mm" : tone === "warn" ? "text-warn" : "text-foreground";
   return (
-    <div className="border-r border-border px-3 py-1.5">
+    <div className="min-w-0 border-b border-r border-border px-3 py-1.5 lg:border-b-0">
       <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
       <div className={`font-mono text-sm tabular-nums ${c}`}>{value}</div>
     </div>
@@ -30,7 +30,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "up
 function Panel({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return (
     <section className={`flex min-h-0 flex-col border border-border bg-card ${className}`}>
-      <h2 className="border-b border-border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{title}</h2>
+      <h2 className="truncate border-b border-border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{title}</h2>
       <div className="min-h-0 flex-1 overflow-auto p-2">{children}</div>
     </section>
   );
@@ -72,12 +72,12 @@ function Terminal() {
   };
 
   return (
-    <main className="flex h-screen flex-col bg-background font-mono text-foreground">
-      <header className="flex items-center gap-4 border-b border-border px-4 py-2">
+    <main className="flex min-h-screen flex-col lg:h-screen bg-background font-mono text-foreground">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-4 py-2">
         <h1 className="text-sm font-bold tracking-[0.3em]">
           CERBERUS<span className="text-mm">▲</span>
         </h1>
-        <span className="text-[10px] text-muted-foreground">INSTITUTIONAL MM / DELTA-NEUTRAL HEDGING · COINBASE BTC-USD / BTC PERP</span>
+        <span className="hidden text-[10px] text-muted-foreground md:inline">INSTITUTIONAL MM / DELTA-NEUTRAL HEDGING · COINBASE BTC-USD / BTC PERP</span>
         <div className="ml-auto flex gap-3 text-[10px]">
           {(["spot", "perp"] as const).map((v) => (
             <span key={v} className={e.status[v] === "live" ? "text-bid" : "text-warn"}>
@@ -86,7 +86,7 @@ function Terminal() {
           ))}
         </div>
       </header>
-      <div className="flex flex-wrap border-b border-border">
+      <div className="grid grid-cols-2 border-b border-border sm:grid-cols-5 lg:flex lg:flex-wrap">
         <Stat label="Spot mid" value={mid.toFixed(2)} />
         <Stat label="Perp mid" value={pmid.toFixed(2)} />
         <Stat label="Basis" value={basis.toFixed(2)} tone={basis >= 0 ? "up" : "down"} />
@@ -98,16 +98,16 @@ function Terminal() {
         <Stat label="Paper P&L" value={`$${pnl.toFixed(2)}`} tone={pnl >= 0 ? "up" : "down"} />
         <Stat label="Sharpe (ann.)" value={e.sharpe().toFixed(1)} />
       </div>
-      <div className="grid min-h-0 flex-1 grid-cols-12 grid-rows-6 gap-px bg-border">
-        <section className="col-span-9 row-span-4 grid min-h-0 grid-rows-2 gap-px">
+      <div className="flex flex-col gap-px lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-12 lg:grid-rows-6 bg-border">
+        <section className="flex flex-col gap-px lg:col-span-9 lg:row-span-4 lg:grid lg:min-h-0 lg:grid-rows-2">
           <Panel title="Passive liquidity heatmap · Coinbase BTC-USD depth (emerald) · echo arcs → perp">
-            <div className="h-full"><Heatmap engine={e} /></div>
+            <div className="h-[300px] lg:h-full"><Heatmap engine={e} /></div>
           </Panel>
           <Panel title="Market maker heatmap · large resting walls & spot/perp mirrored quotes (crimson)">
-            <div className="h-full"><Heatmap engine={e} mode="mm" /></div>
+            <div className="h-[300px] lg:h-full"><Heatmap engine={e} mode="mm" /></div>
           </Panel>
         </section>
-        <Panel title="A-S quoting bot" className="col-span-3 row-span-2">
+        <Panel title="A-S quoting bot" className="lg:col-span-3 lg:row-span-2">
           <div className="grid grid-cols-2 gap-1 text-xs">
             <span className="text-muted-foreground">Bid</span><span className="text-bid">{e.bot.bid.toFixed(2)}</span>
             <span className="text-muted-foreground">Ask</span><span className="text-mm">{e.bot.ask.toFixed(2)}</span>
@@ -121,10 +121,10 @@ function Terminal() {
             {e.bot.enabled ? "Halt bot" : "Resume bot"}
           </button>
         </Panel>
-        <Panel title="Paper equity curve (mark-to-market)" className="col-span-3 row-span-2">
-          <Equity data={e.equity} />
+        <Panel title="Paper equity curve (mark-to-market)" className="lg:col-span-3 lg:row-span-2">
+          <div className="h-[160px] lg:h-full"><Equity data={e.equity} /></div>
         </Panel>
-        <Panel title="Echo matcher · spot maker ↔ perp taker 10–50ms" className="col-span-4 row-span-2">
+        <Panel title="Echo matcher · spot maker ↔ perp taker 10–50ms" className="max-h-[300px] lg:col-span-4 lg:row-span-2 lg:max-h-none">
           <table className="w-full text-[10px]">
             <tbody>
               {e.echoes.slice(-30).reverse().map((x) => (
@@ -138,11 +138,11 @@ function Terminal() {
             </tbody>
           </table>
         </Panel>
-        <Panel title="MAR Art.12 compliance audit ledger (hash-chained)" className="col-span-8 row-span-2">
+        <Panel title="MAR Art.12 compliance audit ledger (hash-chained)" className="max-h-[400px] lg:col-span-8 lg:row-span-2 lg:max-h-none">
           <div className="mb-1 flex justify-end">
             <button onClick={download} className="border border-border px-2 py-0.5 text-[10px] uppercase tracking-widest hover:bg-accent">Export CSV</button>
           </div>
-          <table className="w-full text-[10px]">
+          <table className="w-full min-w-[560px] text-[10px]">
             <tbody>
               {e.ledger.slice(0, 60).map((r) => (
                 <tr key={r.id} className="border-b border-border/50 align-top">
