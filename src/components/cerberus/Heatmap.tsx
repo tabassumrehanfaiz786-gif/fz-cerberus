@@ -33,7 +33,7 @@ export function Heatmap({ engine, mode = "depth" }: { engine: CerberusEngine; mo
       const pTop = mid + range, pBot = mid - range;
       const y = (p: number) => ((pTop - p) / (pTop - pBot)) * H;
       const plotW = W - 70;
-      const cw = plotW / engine.maxCols;
+      const cw = Math.max(2, plotW / engine.maxCols); // narrow screens show fewer, wider columns
       const x0 = plotW - cols.length * cw;
       const rowH = Math.max(2, (engine.bucket / (pTop - pBot)) * H);
       const nowMs = Date.now();
