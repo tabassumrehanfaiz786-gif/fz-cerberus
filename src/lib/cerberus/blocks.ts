@@ -59,7 +59,7 @@ export class BlockFeed {
     try {
       // Explicit kinds avoid the unsupported Coinbase-routed spot kind.
       await Promise.all(['future', 'option'].map(async kind => {
-        const response = await fetch(`https://www.deribit.com/api/v2/public/get_last_trades_by_currency?currency=BTC&kind=${kind}&count=1000`, { signal: this.abort?.signal });
+        const response = await fetch(`https://www.deribit.com/api/v2/public/get_last_trades_by_currency?currency=BTC&kind=${kind}&count=1000`, { signal: this.abort?.signal ?? null });
         if (!response.ok) throw new Error('Recent prints unavailable');
         const body = await response.json();
         if (body.error) throw new Error(body.error.message);
