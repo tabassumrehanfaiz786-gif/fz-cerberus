@@ -28,3 +28,10 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Cerberus architecture
+- Keep public exchange ingestion client-side, with pure quantitative helpers and a separate Deribit block-feed module so instrument normalization is independently testable.
+- Treat public book walls and trade correlations as anonymous behavioral candidates, never firm identities or proof of manipulation.
+- Show idealized gross spread capture separately from signed basis contribution and mark-to-market P&L; midpoint fills cannot establish live profitability.
+- Use canonical SHA-256 session ledger rows with previous hashes and serialize asynchronous hashing; a bounded in-memory chain is not immutable storage or regulatory certification.
+- Deribit tape lists deduplicated block legs with shared block IDs; inverse BTC futures amounts are USD notional and options use BTC underlying exposure, not premium or delta risk.
