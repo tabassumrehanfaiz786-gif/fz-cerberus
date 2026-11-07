@@ -18,7 +18,7 @@ export const Route = createFileRoute('/')({
 const money = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: Math.abs(value) < 1000 ? 2 : 0 }).format(value);
 const utc = (t: number) => new Date(t).toISOString().slice(11, 23);
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: 'up' | 'down' | 'warn' }) {
+function Stat({ label, value, tone }: { label: string; value: string; tone?: 'up' | 'down' | 'warn' | undefined }) {
   const c = tone === 'up' ? 'text-bid' : tone === 'down' ? 'text-mm' : tone === 'warn' ? 'text-warn' : 'text-foreground';
   return <div className="min-w-0 border-b border-r border-border px-3 py-2"><div className="text-[10px] uppercase text-muted-foreground">{label}</div><div className={`break-words text-sm tabular-nums ${c}`}>{value}</div></div>;
 }
