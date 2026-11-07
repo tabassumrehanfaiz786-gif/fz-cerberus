@@ -71,7 +71,7 @@ export class BlockFeed {
     if (!this.active) return;
     this.status = 'connecting';
     const ws = new WebSocket('wss://www.deribit.com/ws/api/v2'); this.ws = ws;
-    ws.onopen = () => ws.send(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'public/subscribe', params: { channels: ['trades.BTC.future.100ms', 'trades.BTC.option.100ms'] } }));
+    ws.onopen = () => ws.send(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'public/subscribe', params: { channels: ['trades.future.BTC.100ms', 'trades.option.BTC.100ms'] } }));
     ws.onerror = () => { this.status = 'error'; };
     ws.onclose = () => { if (this.active) { this.status = 'reconnecting'; this.retry = setTimeout(() => this.open(), 3000); } };
     ws.onmessage = ev => {
