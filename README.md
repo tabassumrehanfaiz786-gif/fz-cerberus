@@ -1,56 +1,245 @@
-# Fz Cerberus
+FZ CERBERUS
 
-Build "Project Cerberus" — an Institutional Market Maker & Delta-Neutral Hedging Terminal.
+Institutional Market Maker Surveillance & Delta-Neutral Hedging Terminal
 
-Features:
+Founder & Original Developer: Faizan Rehan
+Copyright: © 2026 Faizan Rehan. All Rights Reserved.
+Licence: Proprietary – All Rights Reserved.
+Category: FinTech | RegTech | Quantitative Finance
 
-1. Canvas Heatmap: 60 FPS HTML5 2D canvas with Emerald Green passive liquidity depth (#052e16 to #10b981) and Crimson Red market maker overlays (#ef4444).
+---
 
-2. Live WebSocket Feeds: Direct sub-100ms streams for Binance Spot (BTCUSDT depth + aggTrade) and Binance USD-M Perpetual Futures.
+Project Overview
 
-3. Market Maker Surveillance (Citadel/Wintermute/Jump):
+FZ Cerberus is an independently developed institutional market surveillance and algorithmic market-making research platform designed to analyse liquidity behaviour, cross-venue execution patterns, market-maker inventory signals and delta-neutral hedging mechanisms in cryptocurrency derivatives markets.
 
-   - Cross-venue Echo Matcher: Detects Spot maker fills paired with Perp taker hedges within 10-50ms.
+The platform combines real-time market data, advanced order-book visualisation, quantitative market-making models, algorithmic surveillance and regulatory audit architecture.
 
-   - Avellaneda-Stoikov Inventory Skew Inversion: Calculates whether MMs are holding hot long or short inventory.
+Live Application: https://fz-cerberus.lovable.app
 
-   - Toxic Retreat Detector: Flags when >5 BTC depth is pulled in <5ms before a market trade.
+Development Platform: https://lovable.dev
 
-4. Algorithmic MM Bot (Jane Street / Jump Trading):
+---
 
-   - Avellaneda-Stoikov two-sided quoting with inventory skew.
+1. Core Technical Capabilities
 
-   - Zero-delta instantaneous flash hedging on Perp futures (Net Delta = 0.00 BTC).
+1.1 Institutional Liquidity Heatmap
 
-   - High-Sharpe, smooth upward-sloping paper Equity Curve tracking spread capture and basis harvest.
+- HTML5 Canvas 2D rendering architecture.
+- 60 FPS target rendering.
+- Emerald Green passive liquidity depth ("#052e16" to "#10b981").
+- Crimson Red market-maker activity overlays ("#ef4444").
+- Dynamic order-book depth visualisation.
+- Liquidity concentration and withdrawal monitoring.
 
-5. Visual Canvas Overlays:
+1.2 Real-Time Market Data Infrastructure
 
-   - Pulsing Crimson Echo Arcs bridging Spot to Perp fills with latency tags.
+- Binance Spot BTCUSDT depth WebSocket.
+- Binance Spot aggregate trade stream.
+- Binance USD-M Perpetual Futures data.
+- Cross-market event synchronisation.
+- Target sub-100ms data-processing latency, subject to independent validation.
 
-   - Dynamic Skew Ribbon and Toxic Retreat Ghost boxes.
+1.3 Market Maker Surveillance Engine
 
-6. Institutional HUD & UK MAR Art. 12 Compliance Audit Ledger.
+Cross-Venue Echo Matcher
 
-This project was built with [Lovable](https://lovable.dev).
+Identifies potential relationships between Spot executions and Perpetual Futures hedging activity.
 
-**Live app**: https://fz-cerberus.lovable.app
+- Configurable 10–50ms event-matching window.
+- Correlation of Spot maker-side executions with potential Perpetual taker-side hedges.
+- Execution timing and volume analysis.
+- Cross-market execution pattern identification.
 
-## Build with Lovable
+Avellaneda–Stoikov Inventory Skew Analysis
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/d061205f-8696-479e-9575-db031d288773).
+- Inventory-sensitive quote adjustment.
+- Estimated long and short inventory pressure.
+- Dynamic bid and ask skew calculations.
+- Adverse-selection analysis.
+- Potential inventory-risk asymmetry detection.
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+Toxic Liquidity Retreat Detector
 
-## Development
+- Flags order-book withdrawals exceeding 5 BTC.
+- Configurable sub-5ms event-detection window.
+- Liquidity withdrawal sequence analysis.
+- Suspicious cancellation pattern identification.
+- Pre-execution liquidity instability monitoring.
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+1.4 Algorithmic Market-Making Engine
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+An inventory-aware quantitative market-making research engine.
+
+- Avellaneda–Stoikov two-sided quoting.
+- Inventory-adjusted bid and ask pricing.
+- Dynamic spread calculations.
+- Simulated spread capture.
+- Basis-harvesting strategies.
+- Perpetual Futures delta-hedging simulation.
+- Target net delta of 0.00 BTC.
+- Paper-trading equity and performance analytics.
+
+Performance disclosure: Trading returns and equity curves are simulated. They do not represent independently verified live profitability. Delta neutrality is a target requiring reconciliation against actual positions, execution costs, fees and funding.
+
+---
+
+2. Advanced Visual Surveillance Overlays
+
+- Pulsating Crimson Echo Arcs connecting correlated Spot and Perpetual executions.
+- Execution latency annotations.
+- Dynamic inventory-skew ribbon.
+- Toxic liquidity retreat ghost boxes.
+- Institutional-style market intelligence HUD.
+- Real-time liquidity and execution visualisation.
+
+---
+
+3. Institutional Market-Making Research Context
+
+FZ Cerberus draws on publicly available quantitative finance literature, academic research and established market-microstructure concepts.
+
+Its industry research context includes recognised electronic trading and market-making institutions:
+
+- Citadel Securities
+- Jane Street
+- Jump Trading
+- Wintermute
+
+Research Foundations
+
+- Avellaneda–Stoikov optimal market-making theory.
+- Inventory-aware quote adjustment.
+- Algorithmic execution and automated hedging.
+- Cross-venue liquidity analysis.
+- Adverse selection and execution toxicity.
+- Order-book dynamics and liquidity migration.
+
+Independence disclaimer: FZ Cerberus is an independent research and software-development project. It is not affiliated with, endorsed by, sponsored by or developed in collaboration with Citadel Securities, Jane Street, Jump Trading or Wintermute. Their names are used solely for factual industry identification and research context. No proprietary technologies or confidential trading strategies belonging to these organisations are claimed.
+
+---
+
+4. Regulatory Surveillance & UK MAR Article 12
+
+FZ Cerberus incorporates a research-oriented regulatory surveillance framework informed by the UK Market Abuse Regulation (UK MAR), particularly Article 12.
+
+The framework investigates technological approaches to identifying potential indicators of:
+
+- False or misleading signals concerning supply, demand or price.
+- Artificial price formation.
+- Suspicious order placement and cancellation patterns.
+- Potential manipulative trading behaviour.
+- Unusual liquidity withdrawal sequences.
+- Algorithmic execution patterns requiring further investigation.
+
+Cryptographic Audit Architecture
+
+Designed to support:
+
+- Timestamped surveillance events.
+- SHA-256 hash-chain integrity mechanisms.
+- Tamper-evident audit records.
+- Historical event reconstruction.
+- Audit integrity verification.
+
+Regulatory disclaimer: This is a research and surveillance prototype, not an officially certified compliance system or substitute for professional legal and regulatory assessment.
+
+---
+
+5. Technical Architecture
+
+Component| Technology / Method
+Visualisation| HTML5 Canvas 2D
+Market Data| Binance WebSocket APIs
+Market Analysis| Order-book analytics
+Market-Making Model| Avellaneda–Stoikov
+Hedging Model| Spot–Perpetual Delta Neutrality
+Surveillance| Cross-Venue Event Correlation
+Liquidity Analysis| Order-Book Event Monitoring
+Audit Integrity| SHA-256 Hash-Chain Architecture
+Regulatory Framework| UK MAR Article 12-inspired surveillance
+
+---
+
+6. Research & Innovation
+
+FZ Cerberus explores the intersection of:
+
+1. Financial market microstructure.
+2. Algorithmic market-making.
+3. Institutional liquidity behaviour.
+4. Cryptocurrency derivatives surveillance.
+5. Cross-venue execution analysis.
+6. Financial regulatory technology (RegTech).
+7. Market manipulation detection.
+8. Investor protection and market integrity.
+
+Central research question:
+
+How can real-time market microstructure analysis and algorithmic surveillance improve the identification of potentially manipulative trading patterns in cryptocurrency derivatives markets?
+
+---
+
+7. Development
+
+This project was developed using "Lovable" (https://lovable.dev).
+
+Run Locally
+
+git clone <YOUR-REPOSITORY-URL>
+cd <REPOSITORY-NAME>
+npm install
 npm run dev
-```
+
+Requirements:
+
+- Node.js
+- npm
+- Internet connectivity for live market data feeds.
+
+---
+
+8. Intellectual Property & Proprietary Licence
+
+Project: FZ Cerberus
+Founder and Copyright Owner: Faizan Rehan
+Copyright Year: 2026
+Licence: Proprietary – All Rights Reserved.
+
+FZ Cerberus is an independently developed proprietary software project.
+
+All original source code, software architecture, original algorithmic implementations, surveillance methodologies, interface designs, documentation and associated original materials developed specifically for this project are the intellectual property of Faizan Rehan, subject to applicable third-party rights and licences.
+
+Ownership and Restrictions
+
+Without prior written authorisation from the copyright owner, no individual, organisation or third party is permitted to:
+
+- Copy or reproduce proprietary source code.
+- Redistribute or commercially exploit proprietary components.
+- Modify, adapt or create derivative works from proprietary components.
+- Sell, sublicense or transfer proprietary software rights.
+- Republish original proprietary algorithms or implementation methodologies.
+- Claim authorship or ownership of original proprietary materials.
+- Incorporate proprietary components into another commercial product.
+
+Academic Evaluation Permission
+
+Universities, admissions committees, scholarship panels and authorised academic evaluators may access the publicly hosted demonstration solely for academic evaluation, admissions assessment and research review.
+
+This limited permission does not grant rights to reproduce, modify, redistribute or commercially exploit the software.
+
+Third-Party Components
+
+External libraries, frameworks, APIs and dependencies remain subject to their respective licences. This notice does not override third-party intellectual property rights.
+
+Licensing and Authorisation
+
+Commercial licensing, research collaboration, redistribution and other authorised uses require prior written permission from the copyright owner.
+
+All rights not expressly granted in writing are reserved.
+
+© 2026 Faizan Rehan. All Rights Reserved.
+
+---
+
+FZ CERBERUS — Independent Financial Technology Research & Development.
