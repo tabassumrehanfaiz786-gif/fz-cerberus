@@ -17,6 +17,8 @@ The platform combines real-time market data, advanced order-book visualisation, 
 
 Live Application: https://fz-cerberus.lovable.app
 
+GitHub : https://github.com/tabassumrehanfaiz786-gif/fz-cerberus⁠
+
 Development Platform: https://lovable.dev
 
 ---
