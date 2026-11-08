@@ -1,0 +1,12 @@
+import type { ReactNode } from 'react';
+import { Activity, ArrowUpRight } from 'lucide-react';
+import { useCarry } from './CarryProvider';
+export const usd = (n: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(n);
+export const price = (n: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: n < 1 ? 6 : 2 }).format(n);
+export function CarryHeader({ title, subtitle, actions }: { title: string; subtitle: string; actions?: ReactNode }) {
+  const b = useCarry();
+  return <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-4 py-5 sm:px-6"><div><div className="mb-2 flex items-center gap-2 text-[10px] uppercase text-perp"><Activity size={13} />Cash & carry · paper only</div><h1 className="text-2xl font-semibold">{title}</h1><p className="mt-2 text-xs text-muted-foreground">{subtitle}</p></div><div className="flex flex-wrap items-center gap-3"><span className={b?.feed.status === 'live' ? 'text-bid text-xs' : 'text-warn text-xs'}>● BYBIT {b?.feed.status ?? 'connecting'}</span>{actions}</div></header>;
+}
+export function CarryStat({ label, value, note, tone = '' }: { label: string; value: string; note?: string; tone?: string }) { return <div className="min-w-0 border-b border-r border-border px-4 py-4"><div className="text-[10px] uppercase text-muted-foreground">{label}</div><div className={`mt-2 break-words text-xl tabular-nums ${tone}`}>{value}</div>{note && <div className="mt-1 text-[10px] text-muted-foreground">{note}</div>}</div>; }
+export function CarryBand({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) { return <section className="min-w-0 border-b border-border"><div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3"><h2 className="text-xs font-semibold uppercase">{title}</h2>{actions}</div>{children}</section>; }
+export function CarryDisclaimer() { return <footer className="px-4 py-4 text-[10px] leading-relaxed text-muted-foreground"><ArrowUpRight className="mr-1 inline size-3" />Public Bybit data · USDT values, not bank USD · up to 50 matched assets ranked by shared-market turnover, not market cap. Projected funding is variable, not a success probability. Paper fills use bid/ask and assumed costs; no real orders. The session runs only while this browser remains active; closing or refreshing resets it. Equity and margin can fall. Audit hashes are session evidence, not certified compliance.</footer>; }
