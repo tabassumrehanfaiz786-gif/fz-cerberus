@@ -12,6 +12,9 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { CarryProvider } from '@/components/cerberus/CarryProvider';
+import { Button } from '@/components/ui/button';
+import { useCarry } from '@/components/cerberus/CarryProvider';
 
 function NotFoundComponent() {
   return (
@@ -78,11 +81,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Cerberus — Market Surveillance & Paper Carry" },
+      { name: "description", content: "Public market surveillance and live-data cash-and-carry paper research." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Cerberus — Market Surveillance & Paper Carry" },
+      { property: "og:description", content: "Live crypto market research, carry screening and simulated hedging." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
@@ -120,8 +123,16 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <CarryProvider>
+      <TerminalNavigation />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      </CarryProvider>
     </QueryClientProvider>
   );
+}
+
+function TerminalNavigation() {
+  const b = useCarry();
+  return <nav aria-label="Terminal navigation" className="flex flex-wrap items-center gap-1 border-b border-border bg-background px-3 py-2 font-mono"><span className="mr-3 text-sm font-bold text-foreground">CERBERUS<span className="text-mm"> ▲</span></span>{([{ to: '/', label: 'Surveillance' }, { to: '/screener', label: '50-Asset Screener' }, { to: '/desk', label: 'Hedge Desk' }] as const).map(item => <Button asChild key={item.to} size="sm" variant="ghost"><Link to={item.to} activeProps={{ className: 'bg-secondary text-perp' }} activeOptions={{ exact: true }}>{item.label}</Link></Button>)}<span className="ml-auto py-1 text-[10px] text-muted-foreground">PAPER ONLY · {b?.enabled ? `${b.positions.length} HEDGES ACTIVE` : 'NO REAL ORDERS'}</span></nav>;
 }

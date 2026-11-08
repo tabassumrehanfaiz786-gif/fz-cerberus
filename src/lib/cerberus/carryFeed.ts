@@ -18,6 +18,12 @@ export class CarryFeed {
   private retries: ReturnType<typeof setTimeout>[] = [];
   private symbols: string[] = [];
   constructor(private onChange: () => void) {}
+  async settledFunding(symbol: string, timestamp: number): Promise<number | null> {
+    const result = await this.request(`funding/history?category=linear&symbol=${encodeURIComponent(symbol)}&startTime=${timestamp}&endTime=${timestamp}&limit=1`);
+    const row = result.list?.find((r: { fundingRateTimestamp: string }) => +r.fundingRateTimestamp === timestamp);
+    const rate = Number(row?.fundingRate);
+    return row && Number.isFinite(rate) ? rate : null;
+  }
   start() { this.active = true; void this.refresh(); this.timer = setInterval(() => void this.refresh(), 15_000); }
   stop() { this.active = false; clearInterval(this.timer); this.abort?.abort(); this.retries.forEach(clearTimeout); this.sockets.forEach(s => { s.onclose = null; s.close(); }); }
   private async request(path: string) {

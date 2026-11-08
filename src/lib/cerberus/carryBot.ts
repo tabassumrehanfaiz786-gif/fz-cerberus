@@ -27,6 +27,7 @@ export class CarryBot {
   private lastSample = 0;
   private benchmarkPnl = 0;
   private lastMarkets = new Map<string, CarryMarket>();
+  private settling = new Set<number>();
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
   private notify() { this.listeners.forEach(fn => fn()); }
   start() { this.feed.start(); this.timer = setInterval(() => this.step(), 1000); }
@@ -59,6 +60,18 @@ export class CarryBot {
     this.notify(); return true;
   }
   unwindAll() { this.enabled = false; for (const p of [...this.positions]) this.close(p, 'Close all'); this.notify(); }
+  private async settle(p: CarryPosition, m: CarryMarket, timestamp: number) {
+    this.settling.add(p.id);
+    try {
+      const rate = await this.feed.settledFunding(p.symbol, timestamp);
+      if (rate === null) return;
+      // Settlement uses current mark as an explicit approximation, not an execution price.
+      const cash = p.qty * m.mark * rate;
+      p.fundingPaid += cash; this.funding += cash; p.lastSettlement = m.nextFunding;
+      this.record('PAPER FUNDING', `${p.asset} · settled rate ${(rate * 100).toFixed(6)}% · mark-estimated payment ${cash.toFixed(4)} USDT · settlement ${timestamp}`);
+    } catch { /* Keep the pending boundary; retry on the next fresh tick, never invent a payment. */ }
+    finally { this.settling.delete(p.id); this.notify(); }
+  }
   private step() {
     this.now = Date.now();
     const elapsed = Math.min((this.now - this.previous) / 1000, 5); this.previous = this.now;
@@ -66,11 +79,10 @@ export class CarryBot {
     for (const p of [...this.positions]) {
       const m = this.market(p); if (!m || !isFresh(m, this.now)) continue;
       this.drag += p.qty * p.entrySpot * p.dragApr / 100 * elapsed / (365 * 86400);
-      // No invented continuous funding cash: credit only a newly observed settlement boundary.
+      // No invented continuous funding cash: require an exchange historical settled rate.
       if (p.lastSettlement && p.lastSettlement <= this.now && m.nextFunding > p.lastSettlement) {
-        this.record('FUNDING UNVERIFIED', `${p.asset} · settlement crossed; predicted rate is not a verified historical payment, no cash credited`);
+        if (!this.settling.has(p.id)) void this.settle(p, m, p.lastSettlement);
       }
-      p.lastSettlement = m.nextFunding;
       if (marginHealth(p, m).buffer <= 0) this.close(p, 'Simulated margin breach');
       else if (this.enabled && m.funding <= 0) this.close(p, 'Non-positive projected funding');
     }

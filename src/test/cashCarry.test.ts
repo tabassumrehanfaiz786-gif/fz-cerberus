@@ -1,0 +1,27 @@
+import { describe, it, expect } from 'vitest';
+import { STARTING_CAPITAL, MAX_UNIVERSE, MAX_POSITIONS, DEFAULT_SETTINGS, fundingApr, indicativeApy, roundTripCost, netCarryApr, rankCandidates, positionPnl, dollarDelta, marginHealth, stressPnl, type CarryMarket, type CarryPosition } from '@/lib/cerberus/cashCarry';
+import { CarryBot } from '@/lib/cerberus/carryBot';
+const now = 1_000_000;
+const m: CarryMarket = { asset: 'BTC', symbol: 'BTCUSDT', spotBid: 100, spotAsk: 100, perpBid: 101, perpAsk: 101, mark: 101, funding: 0.0001, intervalHours: 8, nextFunding: now + 10000, volume: 10_000_000, ts: now };
+const p: CarryPosition = { id: 1, asset: 'BTC', symbol: 'BTCUSDT', qty: 10, entrySpot: 100, entryPerp: 101, collateral: 1010, opened: now, lastSettlement: now + 10000, fundingPaid: 0, fees: 0, entryCostBps: 12, dragApr: 1, benchmarkQty: 20 };
+describe('Cash-and-carry rules', () => {
+  it('starts with 100,000 paper capital', () => expect(STARTING_CAPITAL).toBe(100000));
+  it('caps the matched screener universe at 50', () => expect(MAX_UNIVERSE).toBe(50));
+  it('caps the hedge desk at 10 distinct assets', () => { const markets = Array.from({ length: 50 }, (_, i) => ({ ...m, asset: `A${i}`, symbol: `A${i}USDT`, funding: 0.001 })); expect(MAX_POSITIONS).toBe(10); expect(rankCandidates(markets, DEFAULT_SETTINGS, now)).toHaveLength(10); });
+  it('annualizes an 8h 0.01% rate to 10.95% APR', () => expect(fundingApr(0.0001, 8)).toBeCloseTo(10.95));
+  it('uses instrument-specific funding intervals', () => expect(fundingApr(0.0001, 4)).toBeCloseTo(21.9));
+  it('distinguishes hypothetical compounded APY', () => expect(indicativeApy(0.0001, 8)).toBeCloseTo((Math.pow(1.0001, 1095) - 1) * 100));
+  it('charges four round-trip leg costs', () => expect(roundTripCost(5000, DEFAULT_SETTINGS)).toBe(24));
+  it('annualizes one-off costs over a hold horizon and reserves collateral', () => expect(netCarryApr(m, DEFAULT_SETTINGS)).toBeCloseTo((10.95 - 5.84 - 1) / 2));
+  it('rejects negative funding', () => expect(rankCandidates([{ ...m, funding: -0.01 }], DEFAULT_SETTINGS, now)).toHaveLength(0));
+  it('rejects stale markets', () => expect(rankCandidates([{ ...m, ts: now - 30001 }], DEFAULT_SETTINGS, now)).toHaveLength(0));
+  it('requires the configured shared volume floor', () => expect(rankCandidates([{ ...m, volume: 4_999_999 }], DEFAULT_SETTINGS, now)).toHaveLength(0));
+  it('does not count spot-perp basis as guaranteed perpetual yield', () => expect(netCarryApr({ ...m, perpBid: 1000 }, DEFAULT_SETTINGS)).toBe(netCarryApr(m, DEFAULT_SETTINGS)));
+  it('uses equal quantities with signed mark-to-market basis', () => expect(positionPnl(p, { ...m, spotBid: 110, perpAsk: 112 })).toBe(-10));
+  it('shows dollar-notional drift rather than falsely declaring zero', () => expect(dollarDelta(p, m)).toBe(-10));
+  it('preserves parallel price hedge at both requested shock endpoints before costs', () => { expect(stressPnl(p, { ...m, perpAsk: 100 }, -50, 0)).toBe(10); expect(stressPnl(p, { ...m, perpAsk: 100 }, 100, 0)).toBe(10); });
+  it('basis widening produces a loss', () => expect(stressPnl(p, m, 0, 100)).toBeCloseTo(-10.1));
+  it('a 100% rally can breach isolated short margin despite a hedged portfolio', () => expect(marginHealth(p, m, 100).buffer).toBeLessThan(0));
+  it('ignores duplicate assets in allocation', () => expect(rankCandidates([m, m], DEFAULT_SETTINGS, now)).toHaveLength(1));
+  it('marks paper equity after entry costs without upward fabrication', () => { const bot = new CarryBot(); bot.positions = [p]; bot.feed.markets = [{ ...m, spotBid: 99, perpAsk: 102 }]; bot.costs = 12; expect(bot.equity).toBe(99968); });
+});

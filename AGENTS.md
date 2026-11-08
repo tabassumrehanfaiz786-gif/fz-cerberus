@@ -35,3 +35,6 @@ use the editor.
 - Show idealized gross spread capture separately from signed basis contribution and mark-to-market P&L; midpoint fills cannot establish live profitability.
 - Use canonical SHA-256 session ledger rows with previous hashes and serialize asynchronous hashing; a bounded in-memory chain is not immutable storage or regulatory certification.
 - Deribit tape lists deduplicated block legs with shared block IDs; inverse BTC futures amounts are USD notional and options use BTC underlying exposure, not premium or delta risk.
+- Mount the session-only carry bot in a root context so public market ingestion and paper positions survive internal page navigation without browser storage or real order routing.
+- Carry markets join identical active spot/linear-perpetual symbols with instrument funding intervals; rank a liquidity-selected universe using net annualized carry on total committed capital, not success probabilities.
+- Paper funding credits require a historical settled rate; estimate settlement notional at the observed mark and label that approximation. Reserve fully funded spot plus short collateral, and model margin separately from total equity.
