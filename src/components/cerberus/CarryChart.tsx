@@ -3,7 +3,8 @@ import type { EquityPoint } from '@/lib/cerberus/carryBot';
 import { usd } from './CarryShared';
 export function CarryChart({ points }: { points: EquityPoint[] }) {
   const id = useId();
-  if (points.length < 2) return <div className="flex h-64 items-center justify-center text-xs text-muted-foreground">Collecting live equity observations…</div>;
+  const first = points[0];
+  if (!first || points.length < 2) return <div className="flex h-64 items-center justify-center text-xs text-muted-foreground">Collecting live equity observations…</div>;
   const values = points.flatMap(p => [p.net, p.spot, p.treasury]);
   const low = Math.min(...values) - 5, high = Math.max(...values) + 5;
   const path = (key: 'net' | 'spot' | 'treasury') => points.map((p, i) => `${i ? 'L' : 'M'}${60 + i / (points.length - 1) * 900},${220 - (p[key] - low) / (high - low) * 190}`).join(' ');

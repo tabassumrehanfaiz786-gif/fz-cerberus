@@ -27,7 +27,7 @@ export class CarryFeed {
   start() { this.active = true; void this.refresh(); this.timer = setInterval(() => void this.refresh(), 15_000); }
   stop() { this.active = false; clearInterval(this.timer); this.abort?.abort(); this.retries.forEach(clearTimeout); this.sockets.forEach(s => { s.onclose = null; s.close(); }); }
   private async request(path: string) {
-    const response = await fetch(`https://api.bybit.com/v5/market/${path}`, { signal: this.abort?.signal });
+    const response = await fetch(`https://api.bybit.com/v5/market/${path}`, { signal: this.abort?.signal ?? null });
     if (!response.ok) throw new Error(`Bybit public data unavailable (${response.status})`);
     const body = await response.json();
     if (body.retCode !== 0) throw new Error(body.retMsg || 'Public feed error');
@@ -47,8 +47,8 @@ export class CarryFeed {
       }
       const [spot, perp] = await Promise.all([this.request('tickers?category=spot'), this.request('tickers?category=linear')]);
       if (!this.active) return;
-      this.spot = new Map(spot.list.map((t: Ticker) => [t.symbol, { ...t, received: String(Date.now()) }]));
-      this.perp = new Map(perp.list.map((t: Ticker) => [t.symbol, { ...t, received: String(Date.now()) }]));
+      this.spot = new Map(spot.list.map((t: Ticker) => [t['symbol'] ?? '', { ...t, received: String(Date.now()) }]));
+      this.perp = new Map(perp.list.map((t: Ticker) => [t['symbol'] ?? '', { ...t, received: String(Date.now()) }]));
       this.rebuild(); this.status = 'live'; this.error = '';
       if (!this.symbols.length) { this.symbols = this.markets.map(m => m.symbol); this.open('spot'); this.open('linear'); }
     } catch (e) {
@@ -60,7 +60,7 @@ export class CarryFeed {
     this.markets = this.instruments.flatMap(i => {
       const s = this.spot.get(i.symbol), p = this.perp.get(i.symbol);
       if (!s || !p || ['USDC', 'USDT', 'DAI', 'TUSD', 'FDUSD'].includes(i.baseCoin)) return [];
-      const m: CarryMarket = { symbol: i.symbol, asset: i.baseCoin, spotBid: +s.bid1Price, spotAsk: +s.ask1Price, perpBid: +p.bid1Price, perpAsk: +p.ask1Price, mark: +p.markPrice, funding: +p.fundingRate, intervalHours: i.fundingInterval / 60, nextFunding: +p.nextFundingTime, volume: Math.min(+s.turnover24h, +p.turnover24h), ts: Math.min(+s.received, +p.received) };
+      const m: CarryMarket = { symbol: i.symbol, asset: i.baseCoin, spotBid: Number(s['bid1Price']), spotAsk: Number(s['ask1Price']), perpBid: Number(p['bid1Price']), perpAsk: Number(p['ask1Price']), mark: Number(p['markPrice']), funding: Number(p['fundingRate']), intervalHours: i.fundingInterval / 60, nextFunding: Number(p['nextFundingTime']), volume: Math.min(Number(s['turnover24h']), Number(p['turnover24h'])), ts: Math.min(Number(s['received']), Number(p['received'])) };
       return Object.values(m).every(v => typeof v !== 'number' || Number.isFinite(v)) && m.spotBid > 0 && m.perpBid > 0 ? [m] : [];
     }).sort((a, b) => b.volume - a.volume).slice(0, MAX_UNIVERSE);
     this.updated = now; this.onChange();
