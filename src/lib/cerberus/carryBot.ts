@@ -1,6 +1,7 @@
 import { CarryFeed } from './carryFeed';
 import { DEFAULT_SETTINGS, STARTING_CAPITAL, MAX_POSITIONS, isFresh, rankCandidates, positionPnl, marginHealth, type CarryMarket, type CarryPosition } from './cashCarry';
 import { sha256 } from './quant';
+import { DEFAULT_LIMITS, MARKOUT_HORIZONS, packageMarkoutBps, preTradeCheck, rollingDrawdownPct, parseOkxFunding, type Markout, type VenueFunding } from './institutional';
 
 export type CarryEvent = { id: number; ts: number; type: string; detail: string; prevHash: string; hash: string };
 export type EquityPoint = { ts: number; net: number; spot: number; treasury: number };
@@ -19,6 +20,13 @@ export class CarryBot {
   started = Date.now();
   now = Date.now();
   auditError = '';
+  limits = { ...DEFAULT_LIMITS };
+  halted = '';
+  rejections = 0;
+  markouts: Markout[] = [];
+  okx = new Map<string, VenueFunding>();
+  okxError = '';
+  private okxTimer?: ReturnType<typeof setInterval>;
   private seq = 0;
   private listeners = new Set<() => void>();
   private queue: Promise<void> = Promise.resolve();
@@ -30,15 +38,22 @@ export class CarryBot {
   private settling = new Set<number>();
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
   private notify() { this.listeners.forEach(fn => fn()); }
-  start() { this.feed.start(); this.timer = setInterval(() => this.step(), 1000); }
-  stop() { clearInterval(this.timer); this.feed.stop(); }
+  start() { this.feed.start(); this.timer = setInterval(() => this.step(), 1000); void this.loadOkx(); this.okxTimer = setInterval(() => void this.loadOkx(), 60_000); }
+  stop() { clearInterval(this.timer); clearInterval(this.okxTimer); this.feed.stop(); }
+  async loadOkx() {
+    try { const r = await fetch('https://www.okx.com/api/v5/public/funding-rate?instId=ANY'); const j = await r.json(); if (j.code !== '0') throw new Error(); this.okx = parseOkxFunding(j.data ?? []); this.okxError = ''; }
+    catch { this.okxError = 'OKX public funding unavailable'; }
+    this.notify();
+  }
+  killSwitch() { this.halted = 'Manual kill switch'; this.record('KILL SWITCH', 'All paper hedges closed; new entries blocked until reset'); this.unwindAll(); }
+  resetRisk() { this.halted = ''; this.record('RISK RESET', 'Operator cleared halt'); this.notify(); }
   market(p: CarryPosition) { return this.feed.markets.find(m => m.symbol === p.symbol) ?? this.lastMarkets.get(p.symbol); }
   get unrealized() { return this.positions.reduce((sum, p) => { const m = this.market(p); return sum + (m ? positionPnl(p, m) : 0); }, 0); }
   get equity() { return STARTING_CAPITAL + this.realized + this.unrealized + this.funding - this.costs - this.drag; }
   get committed() { return this.positions.reduce((sum, p) => sum + p.collateral + p.qty * p.entrySpot, 0); }
   get free() { return Math.max(0, this.equity - this.committed); }
   get candidates() { return rankCandidates(this.feed.markets, this.settings, this.now); }
-  run() { this.enabled = true; this.record('BOT START', 'Cash-and-carry only · public data · simulated execution'); this.step(); }
+  run() { if (this.halted) return; this.enabled = true; this.record('BOT START', 'Cash-and-carry only · public data · simulated execution'); this.step(); }
   pause() { this.enabled = false; this.record('BOT PAUSE', 'New entries and rotations paused; open positions remain marked'); this.notify(); }
   private record(type: string, detail: string) {
     const id = ++this.seq, ts = this.now;
@@ -86,15 +101,26 @@ export class CarryBot {
       if (marginHealth(p, m).buffer <= 0) this.close(p, 'Simulated margin breach');
       else if (this.enabled && m.funding <= 0) this.close(p, 'Non-positive projected funding');
     }
-    if (this.enabled && !this.auditError) {
+    for (const k of this.markouts) {
+      const m = this.feed.markets.find(x => x.symbol === k.symbol); if (!m || !isFresh(m, this.now)) continue;
+      for (const h of MARKOUT_HORIZONS) if (k.values[h] === undefined && this.now - k.ts >= h * 1000) k.values[h] = packageMarkoutBps(k.entrySpot, k.entryPerp, (m.spotBid + m.spotAsk) / 2, (m.perpBid + m.perpAsk) / 2);
+    }
+    if (!this.halted && rollingDrawdownPct(this.curve, this.now, this.limits.drawdownWindowMin) > this.limits.maxDrawdownPct) {
+      this.halted = `Drawdown > ${this.limits.maxDrawdownPct}% in ${this.limits.drawdownWindowMin} min`; this.enabled = false;
+      this.record('CIRCUIT BREAKER', `${this.halted} · new entries halted`);
+    }
+    if (this.enabled && !this.auditError && !this.halted) {
       for (const m of this.candidates) {
         if (this.positions.length >= MAX_POSITIONS || this.positions.some(p => p.asset === m.asset)) continue;
         const allocation = Math.min(STARTING_CAPITAL / MAX_POSITIONS, this.free * 0.98);
         if (allocation < 100) break;
+        const check = preTradeCheck(allocation, this.committed, this.equity, this.limits);
+        if (!check.ok) { this.rejections++; break; }
         const qty = allocation / (m.spotAsk + m.perpBid);
         const fee = qty * (m.spotAsk + m.perpBid) * (this.settings.feeBps + this.settings.slippageBps) / 10_000;
         const p: CarryPosition = { id: ++this.seq, symbol: m.symbol, asset: m.asset, qty, entrySpot: m.spotAsk, entryPerp: m.perpBid, collateral: qty * m.perpBid, opened: this.now, lastSettlement: m.nextFunding, fundingPaid: 0, fees: fee, entryCostBps: this.settings.feeBps + this.settings.slippageBps, dragApr: this.settings.dragApr, benchmarkQty: allocation / m.spotAsk };
         this.positions.push(p); this.costs += fee;
+        this.markouts.push({ id: p.id, asset: m.asset, symbol: m.symbol, ts: this.now, entrySpot: m.spotAsk, entryPerp: m.perpBid, values: {} }); if (this.markouts.length > 500) this.markouts.shift();
         this.record('PAPER OPEN', `${m.asset} · long spot ${m.spotAsk} / short perp ${m.perpBid} · ${qty.toFixed(8)} units each · cost ${fee.toFixed(2)} USDT`);
       }
     }
