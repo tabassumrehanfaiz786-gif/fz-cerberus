@@ -6,6 +6,7 @@ const MIN_TURNOVER = 20_000_000;
 const STABLES = ['USDC', 'USDT', 'DAI', 'TUSD', 'FDUSD', 'USDE'];
 
 type T = Record<string, string>;
+const sym = (t: T) => t['symbol'] ?? '';
 async function bybit(path: string) {
   const r = await fetch(`https://api.bybit.com/v5/market/${path}`);
   if (!r.ok) throw new Error(`Bybit ${r.status}`);
@@ -17,8 +18,8 @@ async function bybit(path: string) {
 export async function runCloudCarry() {
   const { supabaseAdmin: db } = await import('@/integrations/supabase/client.server');
   const [spotL, perpL] = await Promise.all([bybit('tickers?category=spot'), bybit('tickers?category=linear')]);
-  const spot = new Map(spotL.map(t => [t['symbol'], t]));
-  const perp = new Map(perpL.map(t => [t['symbol'], t]));
+  const spot = new Map(spotL.map(t => [sym(t), t]));
+  const perp = new Map(perpL.map(t => [sym(t), t]));
   const log: { type: string; detail: string; amount?: number }[] = [];
 
   const { data: open = [] } = await db.from('cloud_positions').select('*').is('closed_at', null);
@@ -56,17 +57,17 @@ export async function runCloudCarry() {
   const still = openRows.filter(p => !p.closed_at);
   const held = new Set(still.map(p => p.symbol));
   const ranked = perpL.filter(t => {
-    const s = spot.get(t['symbol']); const base = t['symbol'].replace(/USDT$/, '');
-    return t['symbol'].endsWith('USDT') && s && !STABLES.includes(base) && !held.has(t['symbol'])
+    const s = spot.get(sym(t)); const base = sym(t).replace(/USDT$/, '');
+    return sym(t).endsWith('USDT') && s && !STABLES.includes(base) && !held.has(sym(t))
       && Math.min(Number(t['turnover24h']), Number(s['turnover24h'])) > MIN_TURNOVER && Number(t['fundingRate']) > 0.00005;
   }).sort((a, b) => Number(b['fundingRate']) - Number(a['fundingRate']));
   for (const t of ranked.slice(0, Math.max(0, CLOUD_SLOTS - still.length))) {
-    const s = spot.get(t['symbol'])!; const sa = Number(s['ask1Price']), pb = Number(t['bid1Price']);
+    const s = spot.get(sym(t)); if (!s) continue; const sa = Number(s['ask1Price']), pb = Number(t['bid1Price']);
     if (!(sa > 0 && pb > 0)) continue;
     const alloc = CLOUD_CAPITAL / CLOUD_SLOTS / 2; // spot + equal short collateral
     const qty = alloc / sa; const cost = qty * (sa + pb) * LEG_COST_BPS / 10_000;
-    const asset = t['symbol'].replace(/USDT$/, '');
-    await db.from('cloud_positions').insert({ symbol: t['symbol'], asset, qty, entry_spot: sa, entry_perp: pb, entry_cost: cost, last_settlement: Date.now(), last_spot: sa, last_perp: pb });
+    const asset = sym(t).replace(/USDT$/, '');
+    await db.from('cloud_positions').insert({ symbol: sym(t), asset, qty, entry_spot: sa, entry_perp: pb, entry_cost: cost, last_settlement: Date.now(), last_spot: sa, last_perp: pb });
     log.push({ type: 'OPEN', detail: `${asset} long spot ${sa} / short perp ${pb} · funding ${(Number(t['fundingRate']) * 100).toFixed(4)}%`, amount: -cost });
   }
 
