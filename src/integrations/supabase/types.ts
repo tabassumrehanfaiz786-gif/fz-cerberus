@@ -14,7 +14,111 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      cloud_equity: {
+        Row: {
+          costs: number
+          equity: number
+          funding: number
+          open_count: number
+          ts: string
+          unrealized: number
+        }
+        Insert: {
+          costs: number
+          equity: number
+          funding: number
+          open_count: number
+          ts?: string
+          unrealized: number
+        }
+        Update: {
+          costs?: number
+          equity?: number
+          funding?: number
+          open_count?: number
+          ts?: string
+          unrealized?: number
+        }
+        Relationships: []
+      }
+      cloud_events: {
+        Row: {
+          amount: number | null
+          detail: string
+          id: number
+          ts: string
+          type: string
+        }
+        Insert: {
+          amount?: number | null
+          detail: string
+          id?: number
+          ts?: string
+          type: string
+        }
+        Update: {
+          amount?: number | null
+          detail?: string
+          id?: number
+          ts?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      cloud_positions: {
+        Row: {
+          asset: string
+          close_reason: string | null
+          closed_at: string | null
+          entry_cost: number
+          entry_perp: number
+          entry_spot: number
+          funding_paid: number
+          id: string
+          last_perp: number | null
+          last_settlement: number
+          last_spot: number | null
+          opened_at: string
+          qty: number
+          realized: number | null
+          symbol: string
+        }
+        Insert: {
+          asset: string
+          close_reason?: string | null
+          closed_at?: string | null
+          entry_cost?: number
+          entry_perp: number
+          entry_spot: number
+          funding_paid?: number
+          id?: string
+          last_perp?: number | null
+          last_settlement?: number
+          last_spot?: number | null
+          opened_at?: string
+          qty: number
+          realized?: number | null
+          symbol: string
+        }
+        Update: {
+          asset?: string
+          close_reason?: string | null
+          closed_at?: string | null
+          entry_cost?: number
+          entry_perp?: number
+          entry_spot?: number
+          funding_paid?: number
+          id?: string
+          last_perp?: number | null
+          last_settlement?: number
+          last_spot?: number | null
+          opened_at?: string
+          qty?: number
+          realized?: number | null
+          symbol?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
