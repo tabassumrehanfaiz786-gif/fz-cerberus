@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { useCarry } from '@/components/cerberus/CarryProvider';
 import { CarryHeader, CarryStat, CarryBand, CarryDisclaimer, usd, price } from '@/components/cerberus/CarryShared';
+import { CloudDeskPanel } from '@/components/cerberus/CloudDeskPanel';
 import { CarryChart } from '@/components/cerberus/CarryChart';
 import { RiskPanel, MarkoutPanel, PerformancePanel, MethodologyDialog } from '@/components/cerberus/InstitutionalPanels';
 import { dollarDelta, fundingApr, marginHealth, positionPnl, stressPnl, isFresh, STARTING_CAPITAL } from '@/lib/cerberus/cashCarry';
@@ -25,6 +26,7 @@ function Desk() {
   const download = async () => { setBusy(true); try { const csv = await b.csv(); const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); const a = document.createElement('a'); a.href = url; a.download = 'cerberus-carry-session.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); } finally { setBusy(false); } };
   return <main className="font-mono">
     <CarryHeader title="Hedge Desk" subtitle="Long spot / short perpetual · equal asset quantities · simulated capital" actions={<><MethodologyDialog /><Button size="sm" variant={b.enabled ? 'outline' : 'default'} disabled={!b.enabled && (!b.candidates.length || !!b.halted)} onClick={() => b.enabled ? b.pause() : b.run()}>{b.enabled ? <Pause /> : <Play />}{b.enabled ? 'Pause bot' : 'Start paper bot'}</Button><Button variant="destructive" size="sm" disabled={!b.positions.length} onClick={() => b.unwindAll()}><Square />Close all</Button></>} />
+    <CloudDeskPanel />
     <div className="grid grid-cols-2 lg:grid-cols-4"><CarryStat label="Paper net equity · USDT" value={usd(b.equity)} note={`Start ${usd(STARTING_CAPITAL)} · includes costs`} tone={b.equity >= STARTING_CAPITAL ? 'text-bid' : 'text-mm'} /><CarryStat label="Dollar-notional difference" value={usd(delta)} note="Equal units; basis creates notional drift" tone="text-perp" /><CarryStat label="Projected gross capital APR" value={`${apr.toFixed(2)}%`} note="Current funding extrapolated, not locked" /><CarryStat label="Projected gross funding / day" value={`${usd(projectedDay)} USDT`} note="Not credited cash · rate can change" tone="text-bid" /></div>
     <div className="flex flex-wrap gap-x-6 gap-y-2 border-b border-border px-4 py-3 text-[10px]"><span className={b.enabled ? 'text-bid' : 'text-warn'}>● {b.enabled ? 'PAPER BOT RUNNING' : 'PAPER BOT PAUSED'}</span><span>{b.positions.length}/10 asset hedges</span><span>Committed {usd(b.committed)} USDT</span><span>Available {usd(b.free)} USDT</span><span>Funding credited {usd(b.funding)}</span><span>Fees + slippage {usd(b.costs)}</span><span>Carry drag {usd(b.drag)}</span></div>
     {b.feed.error && <p role="alert" className="px-4 py-3 text-xs text-warn">{b.feed.error}</p>}

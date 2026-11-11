@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DeskRouteImport } from './routes/desk'
 import { Route as ScreenerRouteImport } from './routes/screener'
+import { Route as ApiPublicJobsCloudCarryRouteImport } from './routes/api/public/jobs/cloud-carry'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +29,44 @@ const ScreenerRoute = ScreenerRouteImport.update({
   path: '/screener',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicJobsCloudCarryRoute = ApiPublicJobsCloudCarryRouteImport.update({
+  id: '/api/public/jobs/cloud-carry',
+  path: '/api/public/jobs/cloud-carry',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/desk': typeof DeskRoute
   '/screener': typeof ScreenerRoute
+  '/api/public/jobs/cloud-carry': typeof ApiPublicJobsCloudCarryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/desk': typeof DeskRoute
   '/screener': typeof ScreenerRoute
+  '/api/public/jobs/cloud-carry': typeof ApiPublicJobsCloudCarryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/desk': typeof DeskRoute
   '/screener': typeof ScreenerRoute
+  '/api/public/jobs/cloud-carry': typeof ApiPublicJobsCloudCarryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/desk' | '/screener'
+  fullPaths: '/' | '/desk' | '/screener' | '/api/public/jobs/cloud-carry'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/desk' | '/screener'
-  id: '__root__' | '/' | '/desk' | '/screener'
+  to: '/' | '/desk' | '/screener' | '/api/public/jobs/cloud-carry'
+  id: '__root__' | '/' | '/desk' | '/screener' | '/api/public/jobs/cloud-carry'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DeskRoute: typeof DeskRoute
   ScreenerRoute: typeof ScreenerRoute
+  ApiPublicJobsCloudCarryRoute: typeof ApiPublicJobsCloudCarryRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScreenerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/cloud-carry': {
+      id: '/api/public/jobs/cloud-carry'
+      path: '/api/public/jobs/cloud-carry'
+      fullPath: '/api/public/jobs/cloud-carry'
+      preLoaderRoute: typeof ApiPublicJobsCloudCarryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DeskRoute: DeskRoute,
   ScreenerRoute: ScreenerRoute,
+  ApiPublicJobsCloudCarryRoute: ApiPublicJobsCloudCarryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
