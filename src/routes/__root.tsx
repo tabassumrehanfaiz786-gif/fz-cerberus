@@ -13,7 +13,6 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CarryProvider } from '@/components/cerberus/CarryProvider';
-import { Button } from '@/components/ui/button';
 import { useCarry } from '@/components/cerberus/CarryProvider';
 
 function NotFoundComponent() {
@@ -132,7 +131,27 @@ function RootComponent() {
   );
 }
 
+const STATIONS = [
+  { to: '/', label: 'Surveillance', tag: 'LIVE BOOK', c: 'border-mm/60 bg-mm/10 text-mm', a: 'bg-mm text-background border-mm' },
+  { to: '/screener', label: '50-Asset Screener', tag: 'TOP 50', c: 'border-perp/60 bg-perp/10 text-perp', a: 'bg-perp text-background border-perp' },
+  { to: '/desk', label: 'Hedge Desk', tag: 'PAPER BOT', c: 'border-bid/60 bg-bid/10 text-bid', a: 'bg-bid text-background border-bid' },
+] as const;
+
 function TerminalNavigation() {
   const b = useCarry();
-  return <nav aria-label="Terminal navigation" className="flex flex-wrap items-center gap-1 border-b border-border bg-background px-3 py-2 font-mono"><span className="mr-3 text-sm font-bold text-foreground">CERBERUS<span className="text-mm"> ▲</span></span>{([{ to: '/', label: 'Surveillance' }, { to: '/screener', label: '50-Asset Screener' }, { to: '/desk', label: 'Hedge Desk' }] as const).map(item => <Button asChild key={item.to} size="sm" variant="ghost"><Link to={item.to} activeProps={{ className: 'bg-secondary text-perp' }} activeOptions={{ exact: true }}>{item.label}</Link></Button>)}<span className="ml-auto py-1 text-[10px] text-muted-foreground">PAPER ONLY · {b?.enabled ? `${b.positions.length} HEDGES ACTIVE` : 'NO REAL ORDERS'}</span></nav>;
+  return (
+    <nav aria-label="Terminal navigation" className="flex flex-wrap items-center gap-2 border-b border-border bg-background px-3 py-2 font-mono">
+      <span className="mr-2 text-sm font-bold text-foreground">CERBERUS<span className="text-mm"> ▲</span></span>
+      {STATIONS.map(s => (
+        <Link key={s.to} to={s.to} activeOptions={{ exact: true }}
+          className={`flex items-center gap-2 border px-3 py-1.5 text-xs font-semibold transition-opacity hover:opacity-90 ${s.c}`}
+          activeProps={{ className: s.a }}>
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
+          {s.label}
+          <span className="text-[9px] opacity-70">{s.tag}</span>
+        </Link>
+      ))}
+      <span className="ml-auto py-1 text-[10px] text-muted-foreground">PAPER ONLY · {b?.enabled ? `${b.positions.length} HEDGES ACTIVE` : 'NO REAL ORDERS'}</span>
+    </nav>
+  );
 }
